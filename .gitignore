@@ -139,7 +139,7 @@ celerybeat.pid
 .envrc
 .venv
 env/
-.streamlit/
+# .streamlit/  # COMENTADO TEMPORARIAMENTE PARA DEPLOY
 venv/
 ENV/
 env.bak/
