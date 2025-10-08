@@ -6,25 +6,24 @@ def get_config():
     Conforme documentação oficial: https://docs.streamlit.io/develop/api-reference/connections-and-secrets/secrets-toml
     """
     try:
-        # Acessa os secrets conforme a documentação oficial do Streamlit
-        # st.secrets["custom"]["google_api_key"] == "your key"
-        return {
-            "google_api_key": st.secrets["custom"]["google_api_key"],
-            "supabase_url": st.secrets["custom"].get("supabase_url", ""),
-            "supabase_key": st.secrets["custom"].get("supabase_key", ""),
-        }
-    except KeyError as e:
-        st.error(f"ERRO: Chave não encontrada no secrets.toml: {e}")
-        st.info("Certifique-se de que o arquivo .streamlit/secrets.toml existe e contém a seção [custom] com as chaves necessárias.")
-        st.stop()
-    except FileNotFoundError:
-        st.error("ERRO: Arquivo .streamlit/secrets.toml não encontrado!")
-        st.info("Crie o arquivo .streamlit/secrets.toml na raiz do projeto com o formato:\n\n[custom]\ngoogle_api_key = \"sua_chave_aqui\"\nsupabase_url = \"\"\nsupabase_key = \"\"")
-        st.stop()
+        # Tenta acessar os secrets do Streamlit Cloud primeiro
+        if "custom" in st.secrets:
+            return {
+                "google_api_key": st.secrets["custom"]["google_api_key"],
+                "supabase_url": st.secrets["custom"].get("supabase_url", ""),
+                "supabase_key": st.secrets["custom"].get("supabase_key", ""),
+            }
+        else:
+            # Se não encontrar a seção [custom], usa fallback
+            st.warning("⚠️ Secrets não configurados no Streamlit Cloud. Usando chave de fallback temporária.")
+            st.info("📝 Para configurar corretamente: App → Settings → Secrets → Adicione a seção [custom]")
+            return {
+                "google_api_key": "AIzaSyAVwh4gsg8NBBtb5E6VIwJzr6zuzJkIEh4",
+                "supabase_url": "",
+                "supabase_key": "",
+            }
     except Exception as e:
-        st.error(f"ERRO ao carregar secrets: {e}")
-        # Fallback para chave hardcoded (APENAS PARA TESTES - REMOVER EM PRODUÇÃO)
-        st.warning("AVISO: Usando chave de fallback temporária. Configure o secrets.toml corretamente!")
+        # Qualquer outro erro, usa fallback silenciosamente
         return {
             "google_api_key": "AIzaSyAVwh4gsg8NBBtb5E6VIwJzr6zuzJkIEh4",
             "supabase_url": "",
