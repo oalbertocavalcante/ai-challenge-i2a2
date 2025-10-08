@@ -12,9 +12,9 @@ def get_config():
         }
     except Exception as e:
         print(f"Aviso: Erro ao carregar secrets: {e}")
-        # Fallback para variáveis de ambiente
+        # Fallback para chave pública temporária (APENAS PARA TESTES - TROCAR DEPOIS!)
         return {
-            "google_api_key": os.getenv("GOOGLE_API_KEY"),
-            "supabase_url": os.getenv("SUPABASE_URL", ""),
-            "supabase_key": os.getenv("SUPABASE_KEY", ""),
+            "google_api_key": "AIzaSyAVwh4gsg8NBBtb5E6VIwJzr6zuzJkIEh4",
+            "supabase_url": "",
+            "supabase_key": "",
         }

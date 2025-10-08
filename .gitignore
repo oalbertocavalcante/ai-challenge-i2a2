@@ -145,6 +145,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# Permitir arquivo público temporário
+!.env.public
+
 # Spyder project settings
 .spyderproject
 .spyproject
