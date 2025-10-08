@@ -1,39 +1,20 @@
 import os
-import sys
-
-# Verificar se estamos rodando no Python 3.11+ para usar tomllib
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    import toml as tomllib
+import streamlit as st
 
 def get_config():
-    """Carrega e retorna as configurações do secrets.toml."""
-    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.streamlit', 'secrets.toml')
-
+    """Carrega e retorna as configurações usando st.secrets (compatível com Streamlit Cloud)."""
     try:
-        with open(config_path, 'rb') as f:
-            config_data = tomllib.load(f)
-
-        app_config = config_data.get('custom', {})
-
+        # Tenta carregar do Streamlit secrets (funciona local e no Cloud)
         return {
-            "google_api_key": app_config.get("google_api_key"),
-            "supabase_url": app_config.get("supabase_url"),
-            "supabase_key": app_config.get("supabase_key"),
+            "google_api_key": st.secrets.get("custom", {}).get("google_api_key"),
+            "supabase_url": st.secrets.get("custom", {}).get("supabase_url", ""),
+            "supabase_key": st.secrets.get("custom", {}).get("supabase_key", ""),
         }
-    except FileNotFoundError:
-        print("Aviso: Arquivo secrets.toml não encontrado. Usando variáveis de ambiente como fallback.")
+    except Exception as e:
+        print(f"Aviso: Erro ao carregar secrets: {e}")
         # Fallback para variáveis de ambiente
         return {
             "google_api_key": os.getenv("GOOGLE_API_KEY"),
-            "supabase_url": os.getenv("SUPABASE_URL"),
-            "supabase_key": os.getenv("SUPABASE_KEY"),
-        }
-    except Exception as e:
-        print(f"Erro ao carregar secrets.toml: {e}")
-        return {
-            "google_api_key": None,
-            "supabase_url": None,
-            "supabase_key": None,
+            "supabase_url": os.getenv("SUPABASE_URL", ""),
+            "supabase_key": os.getenv("SUPABASE_KEY", ""),
         }
