@@ -19,7 +19,7 @@ def get_config():
         st.stop()
     except FileNotFoundError:
         st.error("ERRO: Arquivo .streamlit/secrets.toml não encontrado!")
-        st.info("Crie o arquivo .streamlit/secrets.toml na raiz do projeto com o formato:\n\n[custom]\ngoogle_api_key = \"sua_chave_aqui\"\nsupabase_url = \""\nsupabase_key = \""")
+        st.info("Crie o arquivo .streamlit/secrets.toml na raiz do projeto com o formato:\n\n[custom]\ngoogle_api_key = \"sua_chave_aqui\"\nsupabase_url = \"\"\nsupabase_key = \"\"")
         st.stop()
     except Exception as e:
         st.error(f"ERRO ao carregar secrets: {e}")
