@@ -331,7 +331,54 @@ if st.session_state.df is not None:
                 generated_code = ""
 
                 # 2. Roteia para o agente apropriado
-                if agent_to_call == "DataAnalystAgent":
+                # NOVO: Suporte para análises estatísticas completas (BOTH = DataAnalyst + Visualization)
+                if agent_to_call == "BOTH":
+                    # Primeiro: DataAnalystAgent gera tabelas estatísticas
+                    bot_response_content = run_data_analyst(
+                        api_key=config["google_api_key"],
+                        df=st.session_state.df,
+                        analysis_context=st.session_state.all_analyses_history,
+                        specific_question=question_for_agent
+                    )
+                    st.session_state.all_analyses_history += f"Análise Estatística:\n{bot_response_content}\n"
+                    
+                    # Armazenar a análise no banco de dados
+                    if st.session_state.session_id:
+                        try:
+                            memory.store_analysis(
+                                session_id=st.session_state.session_id,
+                                conversation_id=conversation_id,
+                                analysis_type="data_analysis",
+                                results={"analysis": bot_response_content}
+                            )
+                        except Exception as e:
+                            st.warning(f"AVISO: Erro ao salvar analise: {e}")
+                    
+                    # Segundo: VisualizationAgent gera gráfico
+                    try:
+                        generated_code = run_visualization(
+                            api_key=config["google_api_key"],
+                            df=st.session_state.df,
+                            analysis_results=bot_response_content,  # Passa a análise recém-gerada
+                            user_request=question_for_agent
+                        )
+
+                        # Executar código do gráfico
+                        try:
+                            chart_figure = exec_with_cache(generated_code, st.session_state.df)
+                            if chart_figure:
+                                bot_response_content += "\n\n---\n\n**VISUALIZAÇÃO GERADA:**\n\n(Gráfico abaixo)"
+                                st.session_state.all_analyses_history += f"Visualização Gerada: {question_for_agent}\n"
+                            else:
+                                bot_response_content += "\n\nAVISO: Não foi possível gerar visualização."
+                        except Exception as e:
+                            bot_response_content += f"\n\nAVISO: Erro ao gerar visualização: {e}"
+                    except Exception as e:
+                        bot_response_content += f"\n\nAVISO: Erro no agente de visualização: {e}"
+                    
+                    agent_to_call = "BOTH"  # Manter para lógica posterior
+
+                elif agent_to_call == "DataAnalystAgent":
                     bot_response_content = run_data_analyst(
                         api_key=config["google_api_key"],
                         df=st.session_state.df,
@@ -427,8 +474,8 @@ if st.session_state.df is not None:
                         # Sempre exibir o código gerado PRIMEIRO
                         execution_container, results_container = display_code_with_streamlit_suggestion(generated_code, auto_execute=True)
 
-                        # Exibir gráfico APENAS se foi gerado pelo VisualizationAgent (evita duplicação)
-                        if chart_figure and agent_to_call == "VisualizationAgent":
+                        # Exibir gráfico APENAS se foi gerado pelo VisualizationAgent ou BOTH (evita duplicação)
+                        if chart_figure and agent_to_call in ["VisualizationAgent", "BOTH"]:
                             try:
                                 # Usar chave única para evitar re-renderização
                                 chart_key = f"chart_{len(st.session_state.messages)}_{hash(str(chart_figure))}"

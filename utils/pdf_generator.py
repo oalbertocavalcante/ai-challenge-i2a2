@@ -10,6 +10,88 @@ from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
 from datetime import datetime
 import io
+import re
+import tempfile
+import os
+
+def extract_markdown_tables(text):
+    """
+    Extrai tabelas Markdown do texto e retorna lista de tabelas.
+    Retorna: lista de tuplas (tabela_como_lista, posição_no_texto)
+    """
+    tables = []
+    
+    # Regex para detectar tabelas Markdown
+    # Formato: | Col1 | Col2 |
+    #          |------|------|
+    #          | Val1 | Val2 |
+    table_pattern = r'(\|.+\|[\r\n]+\|[-:\s|]+\|[\r\n]+(?:\|.+\|[\r\n]*)+)'
+    
+    matches = re.finditer(table_pattern, text, re.MULTILINE)
+    
+    for match in matches:
+        table_text = match.group(1)
+        lines = [line.strip() for line in table_text.split('\n') if line.strip()]
+        
+        if len(lines) < 2:  # Precisa ter pelo menos cabeçalho e separador
+            continue
+        
+        # Processar linhas da tabela
+        table_data = []
+        for i, line in enumerate(lines):
+            if i == 1:  # Pular linha separadora (|-----|-----|)
+                continue
+            
+            # Extrair células (dividir por |, remover vazias)
+            cells = [cell.strip() for cell in line.split('|') if cell.strip()]
+            if cells:
+                table_data.append(cells)
+        
+        if len(table_data) >= 2:  # Pelo menos cabeçalho + 1 linha de dados
+            tables.append((table_data, match.start(), match.end()))
+    
+    return tables
+
+def create_reportlab_table(table_data):
+    """
+    Converte dados de tabela em objeto Table do ReportLab com estilo.
+    """
+    if not table_data or len(table_data) < 1:
+        return None
+    
+    # Criar tabela ReportLab
+    t = Table(table_data, repeatRows=1)
+    
+    # Estilo da tabela
+    style = TableStyle([
+        # Cabeçalho
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2E5C8A')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('TOPPADDING', (0, 0), (-1, 0), 8),
+        
+        # Corpo da tabela
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
+        ('TOPPADDING', (0, 1), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+        
+        # Bordas
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('LINEBELOW', (0, 0), (-1, 0), 1.5, colors.HexColor('#2E5C8A')),
+        
+        # Linhas alternadas
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F5F5F5')]),
+    ])
+    
+    t.setStyle(style)
+    return t
 
 def create_pdf_report(messages, dataset_name, participant_name="Alberto Côrtes Cavalcante"):
     """
@@ -186,24 +268,87 @@ def create_pdf_report(messages, dataset_name, participant_name="Alberto Côrtes 
             role = message.get("role", "user")
             content = message.get("content", "")
             
-            # Limpar conteúdo para PDF (remover markdown complexo)
-            content_clean = content.replace('**', '').replace('*', '').replace('#', '')
-            
             if role == "user":
+                # Mensagem do usuário - simples
+                content_clean = content.replace('**', '').replace('*', '').replace('#', '')
                 elements.append(Paragraph(
                     f"<b>Pergunta {idx}:</b> {content_clean}",
                     user_style
                 ))
             else:
-                # Limitar tamanho da resposta se muito grande
-                if len(content_clean) > 2000:
-                    content_clean = content_clean[:2000] + "... [conteúdo truncado]"
-                
+                # Mensagem do assistente - pode conter tabelas
                 elements.append(Paragraph(
                     f"<b>Resposta {idx}:</b>",
                     user_style
                 ))
-                elements.append(Paragraph(content_clean, assistant_style))
+                
+                # Extrair tabelas Markdown do conteúdo
+                tables = extract_markdown_tables(content)
+                
+                if tables:
+                    # Tem tabelas - dividir texto em partes
+                    last_pos = 0
+                    
+                    for table_data, start_pos, end_pos in sorted(tables, key=lambda x: x[1]):
+                        # Adicionar texto antes da tabela
+                        text_before = content[last_pos:start_pos]
+                        if text_before.strip():
+                            text_clean = text_before.replace('**', '').replace('*', '').replace('#', '')
+                            if len(text_clean) > 2000:
+                                text_clean = text_clean[:2000] + "... [truncado]"
+                            elements.append(Paragraph(text_clean, assistant_style))
+                            elements.append(Spacer(1, 0.2*cm))
+                        
+                        # Adicionar tabela
+                        reportlab_table = create_reportlab_table(table_data)
+                        if reportlab_table:
+                            elements.append(reportlab_table)
+                            elements.append(Spacer(1, 0.3*cm))
+                        
+                        last_pos = end_pos
+                    
+                    # Adicionar texto após última tabela
+                    text_after = content[last_pos:]
+                    if text_after.strip():
+                        text_clean = text_after.replace('**', '').replace('*', '').replace('#', '')
+                        if len(text_clean) > 2000:
+                            text_clean = text_clean[:2000] + "... [truncado]"
+                        elements.append(Paragraph(text_clean, assistant_style))
+                else:
+                    # Sem tabelas - adicionar texto normal
+                    content_clean = content.replace('**', '').replace('*', '').replace('#', '')
+                    if len(content_clean) > 2000:
+                        content_clean = content_clean[:2000] + "... [conteúdo truncado]"
+                    elements.append(Paragraph(content_clean, assistant_style))
+                
+                # Adicionar gráfico se existir
+                chart_fig = message.get("chart_fig")
+                if chart_fig:
+                    try:
+                        # Salvar gráfico Plotly como imagem temporária
+                        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
+                            tmp_filename = tmp_file.name
+                        
+                        # Exportar gráfico Plotly para PNG
+                        chart_fig.write_image(tmp_filename, width=800, height=500, scale=2)
+                        
+                        # Adicionar imagem ao PDF
+                        img = Image(tmp_filename, width=14*cm, height=8.75*cm)
+                        elements.append(Spacer(1, 0.3*cm))
+                        elements.append(img)
+                        elements.append(Spacer(1, 0.3*cm))
+                        
+                        # Limpar arquivo temporário
+                        try:
+                            os.unlink(tmp_filename)
+                        except:
+                            pass  # Ignorar erro ao deletar arquivo temp
+                    except Exception as e:
+                        # Se falhar ao exportar gráfico, apenas continuar
+                        elements.append(Paragraph(
+                            f"[Gráfico não pôde ser incluído: {str(e)}]",
+                            info_style
+                        ))
             
             elements.append(Spacer(1, 0.3*cm))
     

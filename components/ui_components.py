@@ -3,7 +3,14 @@ import pandas as pd
 import time
 import hashlib
 from datetime import datetime, timezone, timedelta
-from utils.pdf_generator import create_pdf_report
+
+# Importação condicional do PDF generator
+try:
+    from utils.pdf_generator import create_pdf_report
+    PDF_AVAILABLE = True
+except ImportError:
+    PDF_AVAILABLE = False
+    st.warning("⚠️ Bibliotecas de PDF ainda não instaladas. Aguarde alguns minutos e recarregue a página.")
 
 
 
@@ -68,7 +75,10 @@ def build_sidebar(memory, user_id):
 
         # Botão para download do relatório em PDF
         st.subheader("📄 Relatório")
-        if st.session_state.get('messages') and len(st.session_state.messages) > 0:
+        
+        if not PDF_AVAILABLE:
+            st.info("📦 Instalando dependências do PDF... Aguarde alguns minutos e recarregue a página.")
+        elif st.session_state.get('messages') and len(st.session_state.messages) > 0:
             dataset_name = st.session_state.get('df_info', {}).get('file_name', 'dataset')
             
             if st.button("📥 Baixar Relatório em PDF", use_container_width=True):
