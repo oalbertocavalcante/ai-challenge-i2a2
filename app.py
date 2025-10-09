@@ -116,10 +116,16 @@ if not config["google_api_key"]:
     st.stop()
 
 # Verificar se as configurações do Supabase estão configuradas
-if not config["supabase_url"] or not config["supabase_key"]:
+# Só inicializa o Supabase se as credenciais estiverem disponíveis
+if config["supabase_url"] and config["supabase_key"]:
+    try:
+        memory = SupabaseMemory(url=config["supabase_url"], key=config["supabase_key"])
+    except Exception as e:
+        st.warning("AVISO: Erro ao conectar com Supabase. O histórico de sessões não estará disponível.")
+        memory = None
+else:
     st.warning("AVISO: Configurações do Supabase não encontradas. O histórico de sessões não estará disponível.")
-
-memory = SupabaseMemory(url=config["supabase_url"], key=config["supabase_key"])
+    memory = None
 
 # --- Interface do Usuário (Sidebar) ---
 uploaded_file = build_sidebar(memory, st.session_state.user_id)
