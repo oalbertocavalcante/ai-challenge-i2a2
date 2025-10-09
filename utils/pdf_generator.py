@@ -5,10 +5,11 @@ Gera relatório técnico completo da análise de dados
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle, Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle, Image, Preformatted
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
 from datetime import datetime
+import pytz
 import io
 import re
 import tempfile
@@ -187,17 +188,20 @@ def create_pdf_report(messages, dataset_name, participant_name="Alberto Côrtes 
     
     # ===== CAPA =====
     elements.append(Spacer(1, 3*cm))
-    elements.append(Paragraph("RELATÓRIO TÉCNICO", title_style))
+    elements.append(Paragraph("Agentes Autônomos – Relatório da Atividade Extra", title_style))
     elements.append(Spacer(1, 0.5*cm))
-    elements.append(Paragraph("Relatório da Atividade Extra:", subtitle_style))
-    elements.append(Paragraph("Agentes Autônomos de Análise de Dados", subtitle_style))
+    elements.append(Paragraph("Análise Exploratória de Dados com Agentes de IA", subtitle_style))
     elements.append(Spacer(1, 2*cm))
+    
+    # Data e hora no fuso horário de São Paulo
+    sao_paulo_tz = pytz.timezone('America/Sao_Paulo')
+    now_sp = datetime.now(sao_paulo_tz)
     
     # Tabela de informações
     data = [
         ['Participante:', participant_name],
         ['Dataset Analisado:', dataset_name or 'N/A'],
-        ['Data de Geração:', datetime.now().strftime('%d/%m/%Y %H:%M:%S')],
+        ['Data de Geração:', now_sp.strftime('%d/%m/%Y %H:%M:%S') + ' (Horário de São Paulo)'],
         ['Repositório GitHub:', 'https://github.com/oalbertocavalcante/ai-challenge-i2a2'],
         ['Sistema Online:', 'https://ai-challenge-i2a2.streamlit.app/'],
     ]
@@ -230,25 +234,113 @@ def create_pdf_report(messages, dataset_name, participant_name="Alberto Côrtes 
     
     elements.append(PageBreak())
     
-    # ===== SUMÁRIO EXECUTIVO =====
-    elements.append(Paragraph("1. SUMÁRIO EXECUTIVO", subtitle_style))
+    # ===== 1. FRAMEWORK ESCOLHIDA =====
+    elements.append(Paragraph("1. FRAMEWORK ESCOLHIDA", subtitle_style))
     elements.append(Spacer(1, 0.3*cm))
     
-    summary_text = f"""
-    Este relatório apresenta a análise exploratória de dados realizada através de um sistema 
-    de agentes autônomos baseados em IA. O sistema utiliza 5 agentes especializados 
-    (CoordinatorAgent, DataAnalystAgent, VisualizationAgent, ConsultantAgent e CodeGeneratorAgent) 
-    para processar e analisar o dataset "{dataset_name or 'fornecido'}".
-    <br/><br/>
-    O sistema implementa memória contextual completa, permitindo que os agentes acessem 
-    análises anteriores para gerar conclusões fundamentadas e insights de negócio acionáveis.
+    framework_text = """
+    <b>Framework Selecionada: LangChain + Google Gemini 1.5 Flash</b><br/><br/>
+    
+    A solução foi desenvolvida utilizando a framework <b>LangChain 0.3.27</b> integrada com o modelo de 
+    linguagem <b>Google Gemini 1.5 Flash</b>. Esta combinação foi escolhida pelos seguintes motivos:<br/><br/>
+    
+    <b>• LangChain:</b> Framework Python especializada em construção de aplicações com LLMs, oferecendo 
+    abstrações para chains, agents, prompts e memória contextual. Permite orquestração complexa de 
+    múltiplos agentes especializados.<br/><br/>
+    
+    <b>• Google Gemini 1.5 Flash:</b> Modelo de IA multimodal de última geração da Google, com contexto 
+    de 1 milhão de tokens, latência baixa (~2-3 segundos por resposta) e capacidade de raciocínio avançado 
+    para análise de dados.<br/><br/>
+    
+    <b>• Streamlit 1.50.0:</b> Framework de interface web em Python para deploy rápido e interface 
+    interativa com o usuário.<br/><br/>
+    
+    <b>Bibliotecas Complementares:</b><br/>
+    • <b>Pandas 2.0+:</b> Manipulação e análise de dados<br/>
+    • <b>Plotly 5.18+:</b> Visualizações interativas<br/>
+    • <b>NumPy, SciPy, Scikit-learn:</b> Computação científica e estatística<br/>
+    • <b>ReportLab 4.0+:</b> Geração de relatórios em PDF<br/>
+    • <b>Tabulate:</b> Formatação de tabelas Markdown<br/>
     """
     
-    elements.append(Paragraph(summary_text, normal_style))
+    elements.append(Paragraph(framework_text, normal_style))
     elements.append(Spacer(1, 0.5*cm))
     
-    # ===== HISTÓRICO DA CONVERSA =====
-    elements.append(Paragraph("2. HISTÓRICO DA ANÁLISE", subtitle_style))
+    elements.append(PageBreak())
+    
+    # ===== 2. ESTRUTURA DA SOLUÇÃO =====
+    elements.append(Paragraph("2. ESTRUTURA DA SOLUÇÃO", subtitle_style))
+    elements.append(Spacer(1, 0.3*cm))
+    
+    structure_text = """
+    <b>2.1 Arquitetura de Agentes Especializados</b><br/><br/>
+    
+    O sistema implementa uma arquitetura multi-agente com 5 agentes especializados coordenados 
+    por um agente orquestrador:<br/><br/>
+    
+    <b>1. CoordinatorAgent (Orquestrador):</b><br/>
+    • Analisa a intenção do usuário através de processamento de linguagem natural<br/>
+    • Roteia a pergunta para o agente mais adequado<br/>
+    • Implementa roteamento inteligente "BOTH" para análises estatísticas (tabela + gráfico)<br/>
+    • Utiliza JSON parsing para decisões estruturadas<br/><br/>
+    
+    <b>2. DataAnalystAgent (Analista de Dados):</b><br/>
+    • Executa análises estatísticas descritivas automaticamente<br/>
+    • Gera tabelas reais usando Pandas: describe(), corr(), outliers (IQR), value_counts()<br/>
+    • Converte DataFrames para formato Markdown para visualização<br/>
+    • Calcula métricas: médias, medianas, desvios, correlações, p-values<br/>
+    • Detecta outliers usando método IQR (Q1-1.5*IQR, Q3+1.5*IQR)<br/><br/>
+    
+    <b>3. VisualizationAgent (Visualização):</b><br/>
+    • Gera código Python/Plotly para gráficos interativos<br/>
+    • Implementa visualizações automáticas para análises estatísticas:<br/>
+      - Heatmaps para correlação<br/>
+      - Box plots para detecção de outliers<br/>
+      - Histogramas para distribuições<br/>
+      - Subplots múltiplos para análises descritivas<br/>
+    • Executa código em sandbox seguro e renderiza gráficos<br/><br/>
+    
+    <b>4. ConsultantAgent (Consultor de Negócios):</b><br/>
+    • Fornece insights e conclusões baseadas em evidências<br/>
+    • Acessa memória completa de análises anteriores (all_analyses_history)<br/>
+    • Gera recomendações estratégicas e acionáveis<br/>
+    • Valida hipóteses com base em análises estatísticas prévias<br/><br/>
+    
+    <b>5. CodeGeneratorAgent (Gerador de Código):</b><br/>
+    • Exporta análises como Jupyter Notebooks (.ipynb)<br/>
+    • Gera código Python reproduzível e documentado<br/>
+    • Inclui imports, carregamento de dados e visualizações<br/><br/>
+    
+    <b>2.2 Implementação de Memória Contextual</b><br/><br/>
+    
+    O sistema mantém dois tipos de memória na sessão:<br/>
+    • <b>conversation_history:</b> Histórico completo de perguntas e respostas<br/>
+    • <b>all_analyses_history:</b> Buffer com todas as análises realizadas, passado para 
+    todos os agentes para contexto cumulativo<br/><br/>
+    
+    Esta memória permite que o ConsultantAgent gere conclusões fundamentadas em TODAS as 
+    análises da sessão, não apenas a última pergunta.<br/><br/>
+    
+    <b>2.3 Fluxo de Execução</b><br/><br/>
+    
+    1. Usuário faz upload do arquivo CSV<br/>
+    2. Sistema carrega dados com Pandas e armazena em st.session_state<br/>
+    3. Usuário digita pergunta no chat<br/>
+    4. CoordinatorAgent analisa intenção e roteia para agente(s) adequado(s)<br/>
+    5. Agente(s) processa(m) pergunta com contexto de memória<br/>
+    6. Sistema executa código gerado (visualizações, análises)<br/>
+    7. Resposta (texto + tabelas + gráficos) é exibida ao usuário<br/>
+    8. Análise é armazenada na memória para consultas futuras<br/>
+    9. Usuário pode baixar conversa completa como PDF<br/>
+    """
+    
+    elements.append(Paragraph(structure_text, normal_style))
+    elements.append(Spacer(1, 0.5*cm))
+    
+    elements.append(PageBreak())
+    
+    # ===== 3. PERGUNTAS E RESPOSTAS (MÍNIMO 4, 1 COM GRÁFICO) =====
+    elements.append(Paragraph("3. PERGUNTAS E RESPOSTAS DA ANÁLISE", subtitle_style))
     elements.append(Spacer(1, 0.3*cm))
     
     if not messages or len(messages) == 0:
@@ -354,94 +446,214 @@ def create_pdf_report(messages, dataset_name, participant_name="Alberto Côrtes 
     
     elements.append(PageBreak())
     
-    # ===== CONCLUSÕES =====
-    elements.append(Paragraph("3. ARQUITETURA DO SISTEMA", subtitle_style))
+    # ===== 4. PERGUNTA SOBRE CONCLUSÕES =====
+    # Detectar se há pergunta sobre conclusões/insights/recomendações
+    has_conclusion_question = False
+    conclusion_q_idx = -1
+    
+    for idx, message in enumerate(messages):
+        if message.get("role") == "user":
+            content_lower = message.get("content", "").lower()
+            if any(word in content_lower for word in ['conclus', 'insight', 'recomend', 'sugest', 'negócio', 'ações', 'estratégia']):
+                has_conclusion_question = True
+                conclusion_q_idx = idx
+                break
+    
+    elements.append(Paragraph("4. PERGUNTA SOBRE CONCLUSÕES DO AGENTE", subtitle_style))
     elements.append(Spacer(1, 0.3*cm))
     
-    architecture_text = """
-    <b>3.1 Agentes Especializados</b><br/><br/>
+    if has_conclusion_question and conclusion_q_idx >= 0:
+        # Mostrar a pergunta e resposta sobre conclusões
+        user_msg = messages[conclusion_q_idx]
+        # Buscar resposta correspondente (próxima mensagem do assistant)
+        assistant_msg = None
+        if conclusion_q_idx + 1 < len(messages):
+            assistant_msg = messages[conclusion_q_idx + 1]
+        
+        elements.append(Paragraph(
+            f"<b>Pergunta:</b> {user_msg.get('content', '')}",
+            user_style
+        ))
+        elements.append(Spacer(1, 0.2*cm))
+        
+        if assistant_msg:
+            content_clean = assistant_msg.get('content', '').replace('**', '').replace('*', '').replace('#', '')
+            if len(content_clean) > 3000:
+                content_clean = content_clean[:3000] + "... [conteúdo truncado para o PDF]"
+            elements.append(Paragraph(
+                f"<b>Resposta do ConsultantAgent:</b>",
+                user_style
+            ))
+            elements.append(Paragraph(content_clean, assistant_style))
+    else:
+        elements.append(Paragraph(
+            "Nenhuma pergunta sobre conclusões foi identificada nesta sessão. "
+            "Recomenda-se fazer perguntas como: 'Quais são as conclusões desta análise?' "
+            "ou 'Que insights e recomendações você pode fornecer?'",
+            normal_style
+        ))
     
-    <b>• CoordinatorAgent:</b> Responsável pelo roteamento inteligente de perguntas para o agente 
-    mais adequado. Analisa a intenção do usuário e direciona para análise estatística, 
-    visualização, insights ou geração de código.<br/><br/>
-    
-    <b>• DataAnalystAgent:</b> Especializado em análises estatísticas descritivas, incluindo 
-    cálculo de médias, medianas, desvios padrão, correlações, detecção de outliers e 
-    identificação de padrões nos dados.<br/><br/>
-    
-    <b>• VisualizationAgent:</b> Gera código Python para criação de gráficos interativos usando 
-    Plotly, incluindo histogramas, scatter plots, box plots, heatmaps e gráficos de linha.<br/><br/>
-    
-    <b>• ConsultantAgent:</b> Fornece insights de negócio, conclusões baseadas em evidências e 
-    recomendações estratégicas. Utiliza toda a memória de análises anteriores para gerar 
-    conclusões fundamentadas.<br/><br/>
-    
-    <b>• CodeGeneratorAgent:</b> Gera código Python completo e exportável em formato Jupyter 
-    Notebook para reprodução das análises.<br/><br/>
-    
-    <b>3.2 Implementação de Memória</b><br/><br/>
-    
-    O sistema implementa memória contextual através de <b>st.session_state.all_analyses_history</b>, 
-    que armazena todas as análises realizadas durante a sessão. Esta memória é passada para 
-    todos os agentes, permitindo:<br/>
-    - Respostas contextualizadas baseadas em análises anteriores<br/>
-    - Geração de conclusões fundamentadas em múltiplas análises<br/>
-    - Recomendações estratégicas baseadas em padrões identificados<br/>
-    - Continuidade da conversa com contexto completo<br/><br/>
-    
-    <b>3.3 Tecnologias Utilizadas</b><br/><br/>
-    
-    • <b>Framework de IA:</b> LangChain + Google Gemini 1.5 Flash<br/>
-    • <b>Interface:</b> Streamlit<br/>
-    • <b>Análise de Dados:</b> Pandas, NumPy, Scikit-learn<br/>
-    • <b>Visualização:</b> Plotly, Seaborn<br/>
-    • <b>Versionamento:</b> Git + GitHub<br/>
-    • <b>Deploy:</b> Streamlit Cloud<br/>
-    """
-    
-    elements.append(Paragraph(architecture_text, normal_style))
-    
+    elements.append(Spacer(1, 0.5*cm))
     elements.append(PageBreak())
     
-    # ===== RODAPÉ =====
-    elements.append(Paragraph("4. INFORMAÇÕES DE ACESSO", subtitle_style))
+    # ===== 5. CÓDIGOS FONTE GERADOS =====
+    elements.append(Paragraph("5. CÓDIGOS FONTE GERADOS", subtitle_style))
     elements.append(Spacer(1, 0.3*cm))
     
+    code_style = ParagraphStyle(
+        'CodeStyle',
+        parent=styles['Code'],
+        fontSize=8,
+        leftIndent=10,
+        rightIndent=10,
+        spaceAfter=10,
+        fontName='Courier'
+    )
+    
+    # Coletar códigos gerados durante a sessão
+    generated_codes = []
+    for message in messages:
+        if message.get("role") == "assistant":
+            code = message.get("generated_code", "")
+            if code and code.strip():
+                generated_codes.append(code)
+    
+    if generated_codes:
+        elements.append(Paragraph(
+            f"Total de códigos gerados: <b>{len(generated_codes)}</b>",
+            info_style
+        ))
+        elements.append(Spacer(1, 0.3*cm))
+        
+        for idx, code in enumerate(generated_codes[:5], 1):  # Limitar a 5 códigos
+            elements.append(Paragraph(
+                f"<b>Código {idx}:</b>",
+                user_style
+            ))
+            elements.append(Spacer(1, 0.1*cm))
+            
+            # Limitar tamanho do código
+            if len(code) > 1500:
+                code = code[:1500] + "\n\n# ... [código truncado para o PDF]"
+            
+            # Adicionar código com formatação
+            try:
+                # Usar Preformatted para manter formatação do código
+                code_lines = code.split('\n')
+                for line in code_lines[:30]:  # Máximo 30 linhas por código
+                    elements.append(Paragraph(line.replace('<', '&lt;').replace('>', '&gt;'), code_style))
+            except:
+                elements.append(Paragraph(code.replace('<', '&lt;').replace('>', '&gt;'), code_style))
+            
+            elements.append(Spacer(1, 0.5*cm))
+            
+            if idx >= 5:
+                elements.append(Paragraph(
+                    f"[Mais {len(generated_codes) - 5} código(s) omitido(s) do PDF. "
+                    f"Todos os códigos estão disponíveis no histórico da aplicação.]",
+                    info_style
+                ))
+                break
+    else:
+        elements.append(Paragraph(
+            "Nenhum código foi gerado nesta sessão. Os códigos são gerados quando o usuário "
+            "solicita explicitamente gráficos, análises programáticas ou exportação de notebooks.",
+            normal_style
+        ))
+    
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # Informações sobre o repositório
+    repo_info = """
+    <b>Código Fonte Completo:</b><br/><br/>
+    Todo o código fonte da aplicação está disponível no repositório GitHub:<br/>
+    <b>https://github.com/oalbertocavalcante/ai-challenge-i2a2</b><br/><br/>
+    
+    <b>Estrutura do Repositório:</b><br/>
+    • <b>agents/:</b> Implementação dos 5 agentes especializados<br/>
+    • <b>components/:</b> Componentes da interface (UI, geração de notebooks, PDF)<br/>
+    • <b>utils/:</b> Utilitários (config, memória, cache, geração de PDF)<br/>
+    • <b>app.py:</b> Aplicação principal Streamlit<br/>
+    • <b>requirements.txt:</b> Dependências Python<br/>
+    • <b>README.md:</b> Documentação completa<br/>
+    """
+    
+    elements.append(Paragraph(repo_info, normal_style))
+    elements.append(Spacer(1, 0.5*cm))
+    elements.append(PageBreak())
+    
+    # ===== 6. LINK PARA ACESSAR O AGENTE =====
+    elements.append(Paragraph("6. LINK PARA ACESSAR O AGENTE", subtitle_style))
+    elements.append(Spacer(1, 0.3*cm))
+    
+    access_text = """
+    <b>Sistema Online em Produção:</b><br/><br/>
+    
+    O agente de análise de dados está disponível online 24/7 através do Streamlit Cloud:<br/><br/>
+    
+    <b>🔗 URL: https://ai-challenge-i2a2.streamlit.app/</b><br/><br/>
+    
+    <b>Como Utilizar:</b><br/>
+    1. Acesse o link acima em qualquer navegador<br/>
+    2. Faça upload de um arquivo CSV (máximo 500MB)<br/>
+    3. Digite suas perguntas no chat<br/>
+    4. Receba análises estatísticas, gráficos e insights<br/>
+    5. Baixe o relatório completo em PDF<br/><br/>
+    
+    <b>Repositório GitHub:</b><br/>
+    <b>https://github.com/oalbertocavalcante/ai-challenge-i2a2</b><br/><br/>
+    
+    O repositório contém:<br/>
+    • Código fonte completo<br/>
+    • Documentação técnica detalhada<br/>
+    • Instruções de instalação local<br/>
+    • Guia de deploy no Streamlit Cloud<br/>
+    • Exemplos de uso e perguntas<br/>
+    """
+    
+    elements.append(Paragraph(access_text, normal_style))
+    elements.append(Spacer(1, 1*cm))
+    
+    # Tabela com informações de acesso
     access_data = [
-        ['Repositório GitHub:', 'https://github.com/oalbertocavalcante/ai-challenge-i2a2'],
         ['Sistema Online:', 'https://ai-challenge-i2a2.streamlit.app/'],
+        ['Repositório GitHub:', 'https://github.com/oalbertocavalcante/ai-challenge-i2a2'],
         ['Documentação:', 'README.md no repositório'],
-        ['Licença:', 'MIT License'],
+        ['Participante:', participant_name],
+        ['Dataset Utilizado:', dataset_name or 'N/A'],
     ]
     
-    access_table = Table(access_data, colWidths=[4*cm, 12*cm])
+    access_table = Table(access_data, colWidths=[4.5*cm, 11.5*cm])
     access_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#E8F4F8')),
-        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#1F4788')),
+        ('BACKGROUND', (1, 0), (1, -1), colors.HexColor('#E8F4F8')),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.white),
+        ('TEXTCOLOR', (1, 0), (1, -1), colors.black),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
         ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
         ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ('TOPPADDING', (0, 0), (-1, -1), 8),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#1F4788')),
     ]))
     
     elements.append(access_table)
     elements.append(Spacer(1, 1*cm))
     
     # Nota final
-    final_note = """
-    <b>Nota:</b> Este relatório foi gerado automaticamente pelo sistema de análise de dados. 
-    Para reproduzir as análises, acesse o repositório GitHub e siga as instruções do README.md.
+    sao_paulo_tz = pytz.timezone('America/Sao_Paulo')
+    now_sp = datetime.now(sao_paulo_tz)
+    
+    final_note = f"""
+    <b>Nota Final:</b> Este relatório foi gerado automaticamente pelo sistema de análise de dados 
+    desenvolvido para a I2A2 Academy. O sistema está em produção e disponível para uso público.<br/><br/>
+    
+    <b>Data e Hora de Geração:</b> {now_sp.strftime('%d/%m/%Y às %H:%M:%S')} (Horário de São Paulo)<br/>
+    <b>Curso:</b> Agentes Autônomos - I2A2 Academy<br/>
+    <b>Participante:</b> {participant_name}
     """
     elements.append(Paragraph(final_note, info_style))
-    
-    elements.append(Spacer(1, 1*cm))
-    elements.append(Paragraph(
-        f"Relatório gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M:%S')}",
-        info_style
-    ))
     
     # Construir PDF
     doc.build(elements)
