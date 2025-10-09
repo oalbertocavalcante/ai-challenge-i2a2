@@ -121,10 +121,10 @@ if config["supabase_url"] and config["supabase_key"]:
     try:
         memory = SupabaseMemory(url=config["supabase_url"], key=config["supabase_key"])
     except Exception as e:
-        st.warning("AVISO: Erro ao conectar com Supabase. O histórico de sessões não estará disponível.")
+        # Supabase opcional - sistema funciona sem ele
         memory = None
 else:
-    st.warning("AVISO: Configurações do Supabase não encontradas. O histórico de sessões não estará disponível.")
+    # Supabase opcional - memória da sessão continua funcionando
     memory = None
 
 # --- Interface do Usuário (Sidebar) ---
