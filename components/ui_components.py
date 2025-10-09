@@ -11,6 +11,9 @@ def build_sidebar(memory, user_id):
     with st.sidebar:
         st.header("Análise EDA com IA")
 
+        # Informação sobre limite de upload
+        st.info("💡 **Tamanho máximo:** 500MB\n\nPara arquivos muito grandes, considere usar uma amostra dos dados.")
+
         # Key única baseada no user_id para manter consistência
         unique_key = f"file_uploader_{user_id}"
 
@@ -18,7 +21,8 @@ def build_sidebar(memory, user_id):
             "Faça o upload do seu arquivo CSV",
             type=["csv"],
             accept_multiple_files=False,
-            key=unique_key
+            key=unique_key,
+            help="Arraste e solte ou clique para selecionar um arquivo CSV (até 500MB)"
         )
 
         st.subheader("Histórico de Sessões")
