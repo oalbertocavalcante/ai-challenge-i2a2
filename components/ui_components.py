@@ -3,6 +3,7 @@ import pandas as pd
 import time
 import hashlib
 from datetime import datetime, timezone, timedelta
+from utils.pdf_generator import create_pdf_report
 
 
 
@@ -64,6 +65,34 @@ def build_sidebar(memory, user_id):
                     st.error(f"Erro ao exibir sessão: {e}")
         else:
             st.write("Nenhuma sessão anterior encontrada.")
+
+        # Botão para download do relatório em PDF
+        st.subheader("📄 Relatório")
+        if st.session_state.get('messages') and len(st.session_state.messages) > 0:
+            dataset_name = st.session_state.get('df_info', {}).get('file_name', 'dataset')
+            
+            if st.button("📥 Baixar Relatório em PDF", use_container_width=True):
+                try:
+                    # Gerar PDF
+                    pdf_buffer = create_pdf_report(
+                        messages=st.session_state.messages,
+                        dataset_name=dataset_name,
+                        participant_name="Alberto Côrtes Cavalcante"
+                    )
+                    
+                    # Botão de download
+                    st.download_button(
+                        label="⬇️ Download do Relatório PDF",
+                        data=pdf_buffer,
+                        file_name=f"relatorio_eda_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                    st.success("✅ Relatório gerado com sucesso!")
+                except Exception as e:
+                    st.error(f"❌ Erro ao gerar relatório: {e}")
+        else:
+            st.info("💬 Realize algumas análises primeiro para gerar o relatório.")
 
         st.subheader("Configurações")
         st.info("Configurações futuras aqui.")
